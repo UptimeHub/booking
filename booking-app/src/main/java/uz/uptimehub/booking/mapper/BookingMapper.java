@@ -14,9 +14,8 @@ import java.util.UUID;
 public interface BookingMapper {
 
     @BeanMapping(ignoreByDefault = true)
-    @Mapping(target = "resourceId", source = "resourceId")
-    @Mapping(target = "startTime", source = "startTime")
-    @Mapping(target = "endTime", source = "endTime")
+    @Mapping(target = "startTime", source = "request.startTime")
+    @Mapping(target = "endTime", source = "request.endTime")
     @Mapping(target = "status", expression = "java(uz.uptimehub.booking.dto.booking.Status.PENDING)")
     @Mapping(target = "organizationId", expression = "java(resource.getOrganizationId())")
     @Mapping(target = "resourceId", expression = "java(resource.getId())")

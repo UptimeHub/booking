@@ -20,3 +20,7 @@ custom-header-names:
     id: "X-User-Id"
   organization:
     id: "X-Organization-Id"
+
+services:
+  resource:
+    url: ${RESOURCE_SERVICE_URL:http://localhost:8082}
