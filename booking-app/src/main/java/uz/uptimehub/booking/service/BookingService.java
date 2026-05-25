@@ -9,6 +9,8 @@ import uz.uptimehub.booking.dto.booking.BookingDto;
 import uz.uptimehub.booking.exception.CannotCreateBookingException;
 import uz.uptimehub.booking.jpa.entity.Booking;
 import uz.uptimehub.booking.jpa.repository.BookingRepository;
+import uz.uptimehub.booking.kafka.dto.booking.BookingCreatedEvent;
+import uz.uptimehub.booking.kafka.producer.BookingCreatedEventProducer;
 import uz.uptimehub.booking.mapper.BookingMapper;
 import uz.uptimehub.booking.utils.HeaderUtils;
 import uz.uptimehub.core.exception.EntityNotFoundException;
@@ -26,6 +28,7 @@ public class BookingService {
     private final BookingMapper bookingMapper;
     private final HeaderUtils headerUtils;
     private final ResourceClient resourceClient;
+    private final BookingCreatedEventProducer bookingCreatedEventProducer;
 
     @Transactional
     public BookingDto createBooking(BookingCreateRequest body, HttpServletRequest request) {
@@ -44,10 +47,17 @@ public class BookingService {
 
         bookingRepository.save(booking);
 
-        //TODO publish booking pending event
+        bookingCreatedEventProducer.send(
+                new BookingCreatedEvent(booking.getId(), resource.getId(), userId),
+                null
+        );
 
         return bookingMapper.toDto(booking);
 
+    }
+
+    public void processBookingEvent(BookingCreatedEvent event) {
+        //TODO process booking created event, e.g. send notification to resource owner
     }
 
     private void assertResourceIsActive(ResourceDto resource) {

@@ -6,6 +6,37 @@ spring:
       - optional:file:.env[.properties]
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVER:localhost:9092}
+    producer:
+      properties:
+        transaction.timeout.ms: ${KAFKA_TRANSACTION_TIMEOUT:60000}
+        spring.json.trusted.packages: uz.uptimehub.booking.kafka.dto
+      key-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      transaction-id-prefix: tx_booking_id
+    consumer:
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+      group-id: booking
+      isolation-level: read_committed
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      key-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+      max-poll-records: 10000
+
+app:
+  kafka:
+    concurrency: 1
+    producers:
+      booking-create:
+        transaction-id-prefix: tx_booking_create
+    topics:
+      consume:
+        booking-create: ${KAFKA_TOPIC_BOOKING_CREATE:booking.booking-create}
+
+      produce:
+        booking-create: ${KAFKA_TOPIC_BOOKING_CREATED:booking.booking-created}
 
 server:
   port: 8083
