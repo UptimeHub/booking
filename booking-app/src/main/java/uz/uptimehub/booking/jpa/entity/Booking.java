@@ -5,7 +5,7 @@ import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import uz.uptimehub.booking.dto.Status;
+import uz.uptimehub.booking.dto.booking.Status;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
