@@ -1,3 +1,22 @@
 spring:
   application:
     name: booking-app
+  config:
+    import:
+      - optional:file:.env[.properties]
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+server:
+  port: 8083
+
+custom-header-names:
+  auth:
+    permissions:
+      "X-Auth-Permissions"
+    roles:
+      "X-Auth-Roles"
+  user:
+    id: "X-User-Id"
+  organization:
+    id: "X-Organization-Id"

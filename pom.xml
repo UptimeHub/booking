@@ -37,6 +37,14 @@
         </repository>
     </distributionManagement>
 
+    <repositories>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages - Resource</name>
+            <url>https://maven.pkg.github.com/UptimeHub/resource</url>
+        </repository>
+    </repositories>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
