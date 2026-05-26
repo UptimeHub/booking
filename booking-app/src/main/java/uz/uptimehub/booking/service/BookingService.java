@@ -2,10 +2,13 @@ package uz.uptimehub.booking.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uz.uptimehub.booking.dto.booking.BookingCreateRequest;
 import uz.uptimehub.booking.dto.booking.BookingDto;
+import uz.uptimehub.booking.dto.booking.Status;
 import uz.uptimehub.booking.exception.CannotCreateBookingException;
 import uz.uptimehub.booking.jpa.entity.Booking;
 import uz.uptimehub.booking.jpa.repository.BookingRepository;
@@ -18,8 +21,10 @@ import uz.uptimehub.resource.dto.client.ResourceClient;
 import uz.uptimehub.resource.dto.resource.ResourceDto;
 import uz.uptimehub.resource.dto.resource.ResourceStatus;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookingService {
@@ -30,7 +35,7 @@ public class BookingService {
     private final ResourceClient resourceClient;
     private final BookingCreatedEventProducer bookingCreatedEventProducer;
 
-    @Transactional
+    @Transactional("transactionManager")
     public BookingDto createBooking(BookingCreateRequest body, HttpServletRequest request) {
         ResourceDto resource = resourceClient.getById(body.resourceId());
 
@@ -57,7 +62,31 @@ public class BookingService {
     }
 
     public void processBookingEvent(BookingCreatedEvent event) {
-        //TODO process booking created event, e.g. send notification to resource owner
+        Booking booking = bookingRepository.findById(event.getBookingId()).orElseThrow();
+
+        boolean isBooked = bookingRepository.existsByResourceIdAndStatusAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                booking.getResourceId(),
+                Status.ACTIVE,
+                booking.getEndTime(),
+                booking.getStartTime()
+        );
+
+        if (isBooked) {
+            booking.setStatus(Status.FAILED);
+            // TODO: send BookingFailedEvent to notify user about failure
+        } else {
+            booking.setStatus(Status.ACTIVE);
+            // TODO: send BookingConfirmedEvent to notify user about success
+        }
+
+        bookingRepository.save(booking);
+    }
+
+    @Transactional(transactionManager = "transactionManager")
+    @Scheduled(fixedRate = 60000) // every minute
+    public void expireOldBookings() {
+        log.info("Checking for old bookings, and mark their status expired");
+        bookingRepository.markExpiredBookings(Status.ACTIVE, Status.EXPIRED, LocalDateTime.now());
     }
 
     private void assertResourceIsActive(ResourceDto resource) {
