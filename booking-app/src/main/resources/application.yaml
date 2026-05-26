@@ -25,6 +25,14 @@ spring:
       key-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
       max-poll-records: 10000
 
+springdoc:
+  swagger-ui:
+    enabled: false
+    oauth:
+      client-id: frontend-client
+      use-pkce-with-authorization-code-grant: true
+      scopes: openid profile email
+
 app:
   kafka:
     concurrency: 1
