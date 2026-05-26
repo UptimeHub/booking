@@ -39,12 +39,20 @@ app:
     producers:
       booking-create:
         transaction-id-prefix: tx_booking_create
+      booking-failed:
+        transaction-id-prefix: tx_booking_failed
+      booking-confirmed:
+        transaction-id-prefix: tx_booking_confirmed
     topics:
       consume:
         booking-create: ${KAFKA_TOPIC_BOOKING_CREATE:booking.booking-create}
+        booking-failed: ${KAFKA_TOPIC_BOOKING_FAILED:booking.booking-failed}
+        booking-confirmed: ${KAFKA_TOPIC_BOOKING_CONFIRMED:booking.booking-confirmed}
 
       produce:
         booking-create: ${KAFKA_TOPIC_BOOKING_CREATED:booking.booking-created}
+        booking-failed: ${KAFKA_TOPIC_BOOKING_FAILED:booking.booking-failed}
+        booking-confirmed: ${KAFKA_TOPIC_BOOKING_CONFIRMED:booking.booking-confirmed}
 
 server:
   port: 8083

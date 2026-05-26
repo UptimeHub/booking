@@ -8,7 +8,6 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class BookingConfirmedEvent extends KafkaEvent {
@@ -16,5 +15,13 @@ public class BookingConfirmedEvent extends KafkaEvent {
     private UUID resourceId;
     private UUID userId;
     private LocalDateTime confirmedAt;
+
+    public BookingConfirmedEvent(UUID eventId, UUID bookingId, UUID resourceId, UUID userId, LocalDateTime confirmedAt) {
+        super(eventId);
+        this.bookingId = bookingId;
+        this.resourceId = resourceId;
+        this.userId = userId;
+        this.confirmedAt = confirmedAt;
+    }
 
 }

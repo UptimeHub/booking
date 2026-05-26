@@ -10,7 +10,9 @@ import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
+import uz.uptimehub.booking.kafka.dto.booking.BookingConfirmedEvent;
 import uz.uptimehub.booking.kafka.dto.booking.BookingCreatedEvent;
+import uz.uptimehub.booking.kafka.dto.booking.BookingFailedEvent;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,6 +36,11 @@ public class KafkaConfig {
         return TopicBuilder.name(topic).partitions(4).build();
     }
 
+    @Bean
+    public NewTopic bookingFailedTopic(@Value("${app.kafka.topics.consume.booking-failed}") String topic) {
+        return TopicBuilder.name(topic).partitions(4).build();
+    }
+
     @Bean("bookingCreatedEventProducerFactory")
     public ProducerFactory<String, BookingCreatedEvent> bookingCreatedEventProducerFactory(
             Map<String, Object> commonProducerProperties,
@@ -53,6 +60,48 @@ public class KafkaConfig {
             ProducerFactory<String, BookingCreatedEvent> bookingCreatedEventProducerFactory
     ) {
         return new KafkaTemplate<>(bookingCreatedEventProducerFactory);
+    }
+
+    @Bean("bookingFailedEventProducerFactory")
+    public ProducerFactory<String, BookingFailedEvent> bookingFailedEventProducerFactory(
+            Map<String, Object> commonProducerProperties,
+            @Value("${app.kafka.producers.booking-failed.transaction-id-prefix}") String transactionIdPrefix
+    ) {
+        var props = new HashMap<>(commonProducerProperties);
+        String transactionId = generateTransactionId(transactionIdPrefix);
+        DefaultKafkaProducerFactory<String, BookingFailedEvent> factory = new DefaultKafkaProducerFactory<>(props);
+        factory.setTransactionIdPrefix(transactionId);
+
+        return factory;
+    }
+
+    @Bean("bookingFailedEventKafkaTemplate")
+    public KafkaTemplate<String, BookingFailedEvent> bookingFailedEventKafkaTemplate(
+            @Qualifier("bookingFailedEventProducerFactory")
+            ProducerFactory<String, BookingFailedEvent> bookingFailedEventProducerFactory
+    ) {
+        return new KafkaTemplate<>(bookingFailedEventProducerFactory);
+    }
+
+    @Bean("bookingConfirmedEventProducerFactory")
+    public ProducerFactory<String, BookingConfirmedEvent> bookingConfirmedEventProducerFactory(
+            Map<String, Object> commonProducerProperties,
+            @Value("${app.kafka.producers.booking-confirmed.transaction-id-prefix}") String transactionIdPrefix
+    ) {
+        var props = new HashMap<>(commonProducerProperties);
+        String transactionId = generateTransactionId(transactionIdPrefix);
+        DefaultKafkaProducerFactory<String, BookingConfirmedEvent> factory = new DefaultKafkaProducerFactory<>(props);
+        factory.setTransactionIdPrefix(transactionId);
+
+        return factory;
+    }
+
+    @Bean("bookingConfirmedEventKafkaTemplate")
+    public KafkaTemplate<String, BookingConfirmedEvent> bookingConfirmedEventKafkaTemplate(
+            @Qualifier("bookingConfirmedEventProducerFactory")
+            ProducerFactory<String, BookingConfirmedEvent> bookingConfirmedEventProducerFactory
+    ) {
+        return new KafkaTemplate<>(bookingConfirmedEventProducerFactory);
     }
 
     @Bean

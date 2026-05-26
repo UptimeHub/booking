@@ -13,7 +13,10 @@ import uz.uptimehub.booking.exception.CannotCreateBookingException;
 import uz.uptimehub.booking.jpa.entity.Booking;
 import uz.uptimehub.booking.jpa.repository.BookingRepository;
 import uz.uptimehub.booking.kafka.dto.booking.BookingCreatedEvent;
+import uz.uptimehub.booking.kafka.dto.booking.BookingFailedEvent;
+import uz.uptimehub.booking.kafka.producer.BookingConfirmedEventProducer;
 import uz.uptimehub.booking.kafka.producer.BookingCreatedEventProducer;
+import uz.uptimehub.booking.kafka.producer.BookingFailedEventProducer;
 import uz.uptimehub.booking.mapper.BookingMapper;
 import uz.uptimehub.booking.utils.HeaderUtils;
 import uz.uptimehub.core.exception.EntityNotFoundException;
@@ -34,6 +37,8 @@ public class BookingService {
     private final HeaderUtils headerUtils;
     private final ResourceClient resourceClient;
     private final BookingCreatedEventProducer bookingCreatedEventProducer;
+    private final BookingFailedEventProducer bookingFailedEventProducer;
+    private final BookingConfirmedEventProducer bookingConfirmedEventProducer;
 
     @Transactional("transactionManager")
     public BookingDto createBooking(BookingCreateRequest body, HttpServletRequest request) {
@@ -53,7 +58,7 @@ public class BookingService {
         bookingRepository.save(booking);
 
         bookingCreatedEventProducer.send(
-                new BookingCreatedEvent(booking.getId(), resource.getId(), userId),
+                new BookingCreatedEvent(UUID.randomUUID(), booking.getId(), resource.getId(), userId),
                 null
         );
 
@@ -73,10 +78,28 @@ public class BookingService {
 
         if (isBooked) {
             booking.setStatus(Status.FAILED);
-            // TODO: send BookingFailedEvent to notify user about failure
+            bookingFailedEventProducer.send(
+                    new BookingFailedEvent(
+                            UUID.randomUUID(),
+                            booking.getId(),
+                            booking.getResourceId(),
+                            booking.getUserId(),
+                            "Resource is already booked for the given time range",
+                            LocalDateTime.now()
+                    ),
+                    null
+            );
         } else {
             booking.setStatus(Status.ACTIVE);
-            // TODO: send BookingConfirmedEvent to notify user about success
+            bookingCreatedEventProducer.send(
+                    new BookingCreatedEvent(
+                            UUID.randomUUID(),
+                            booking.getId(),
+                            booking.getResourceId(),
+                            booking.getUserId()
+                    ),
+                    null
+            );
         }
 
         bookingRepository.save(booking);
