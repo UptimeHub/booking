@@ -18,19 +18,23 @@ public class Producer<T extends KafkaEvent> {
     public void send(T event, Runnable successHandler) {
         log.trace("Start sending event {} to {}", event, topic);
 
-        CompletableFuture<SendResult<String, T>> result = kafkaTemplate.send(topic, event);
+        kafkaTemplate.executeInTransaction(kafkaOperations -> {
+            CompletableFuture<SendResult<String, T>> result = kafkaOperations.send(topic, event);
 
-        result.whenComplete((sendResult, ex) -> {
-            if (ex == null) {
-                log.trace("Event {} sent to {} successfully", event, topic);
+            result.whenComplete((sendResult, ex) -> {
+                if (ex == null) {
+                    log.trace("Event {} sent to {} successfully", event, topic);
 
-                if (successHandler != null) {
-                    successHandler.run();
+                    if (successHandler != null) {
+                        successHandler.run();
+                    }
+
+                } else {
+                    log.error("Failed to send event {} to {}", event, topic, ex);
                 }
+            });
 
-            } else {
-                log.error("Failed to send event {} to {}", event, topic, ex);
-            }
+            return null;
         });
     }
 }

@@ -4,13 +4,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
-import uz.uptimehub.booking.kafka.dto.booking.BookingCreatedEvent;
+import uz.uptimehub.booking.kafka.dto.booking.BookingConfirmedEvent;
 import uz.uptimehub.booking.service.BookingService;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class BookingConfirmedEventListener implements Listener<BookingCreatedEvent> {
+public class BookingConfirmedEventListener implements Listener<BookingConfirmedEvent> {
 
     private final BookingService bookingService;
 
@@ -20,7 +20,7 @@ public class BookingConfirmedEventListener implements Listener<BookingCreatedEve
             groupId = "booking-booking-confirmed"
     )
     @Override
-    public void receiveEvent(BookingCreatedEvent event) {
+    public void receiveEvent(BookingConfirmedEvent event) {
         bookingService.processBookingStatus(event);
     }
 }
