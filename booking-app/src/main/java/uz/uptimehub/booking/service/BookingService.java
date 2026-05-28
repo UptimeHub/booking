@@ -3,10 +3,15 @@ package uz.uptimehub.booking.service;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import uz.uptimehub.booking.dto.availability.AvailabilityPeriodDto;
+import uz.uptimehub.booking.dto.availability.AvailabilityResponse;
+import uz.uptimehub.booking.dto.availability.AvailabilityStatus;
 import uz.uptimehub.booking.dto.booking.BookingCreateRequest;
 import uz.uptimehub.booking.dto.booking.BookingDto;
 import uz.uptimehub.booking.dto.booking.Status;
@@ -29,6 +34,8 @@ import uz.uptimehub.resource.dto.resource.ResourceDto;
 import uz.uptimehub.resource.dto.resource.ResourceStatus;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -44,6 +51,8 @@ public class BookingService {
     private final BookingFailedEventProducer bookingFailedEventProducer;
     private final BookingConfirmedEventProducer bookingConfirmedEventProducer;
     private final SimpMessagingTemplate messagingTemplate;
+
+    private static final List<Status> BLOCKING_AVAILABILITY_STATUSES = List.of(Status.PENDING, Status.ACTIVE);
 
     @Transactional("transactionManager")
     public BookingDto createBooking(BookingCreateRequest body, HttpServletRequest request) {
@@ -71,14 +80,76 @@ public class BookingService {
 
     }
 
+    public Page<BookingDto> getMyBookings(Status status, UUID resourceId, LocalDateTime from, LocalDateTime to, Pageable pageable, HttpServletRequest request) {
+        UUID userId = headerUtils.extractUserId(request);
+        return bookingRepository.findMyBookings(userId, status, resourceId, from, to, pageable)
+                .map(bookingMapper::toDto);
+    }
+
+    public BookingDto getBooking(UUID bookingId, HttpServletRequest request) {
+        UUID userId = headerUtils.extractUserId(request);
+        return bookingRepository.findByIdAndUserId(bookingId, userId)
+                .map(bookingMapper::toDto)
+                .orElseThrow(() -> new EntityNotFoundException("Booking not found"));
+    }
+
+    public AvailabilityResponse getAvailability(UUID resourceId, LocalDateTime from, LocalDateTime to) {
+        assertAvailabilityDatesCorrectness(from, to);
+
+        ResourceDto resource = resourceClient.getById(resourceId);
+
+        if (resource == null) {
+            throw new EntityNotFoundException("Resource not found");
+        }
+
+        if (resource.getStatus() != ResourceStatus.PUBLISHED) {
+            return new AvailabilityResponse(
+                    resourceId,
+                    from,
+                    to,
+                    List.of(new AvailabilityPeriodDto(from, to, AvailabilityStatus.UNAVAILABLE))
+            );
+        }
+
+        List<Booking> blockingBookings = bookingRepository.findBlockingBookingsForResource(
+                resourceId,
+                BLOCKING_AVAILABILITY_STATUSES,
+                from,
+                to
+        );
+
+        return new AvailabilityResponse(
+                resourceId,
+                from,
+                to,
+                buildAvailabilityPeriods(from, to, blockingBookings)
+        );
+    }
+
+    @Transactional("transactionManager")
+    public BookingDto cancelMyBooking(UUID bookingId, HttpServletRequest request) {
+        UUID userId = headerUtils.extractUserId(request);
+        Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Booking not found"));
+
+        if (booking.getStatus() == Status.CANCELLED
+                || booking.getStatus() == Status.EXPIRED
+                || booking.getStatus() == Status.FAILED) {
+            throw new IllegalStateException("Booking cannot be cancelled");
+        }
+
+        booking.setStatus(Status.CANCELLED);
+        return bookingMapper.toDto(bookingRepository.save(booking));
+    }
+
     public void processBookingEvent(BookingCreatedEvent event) {
         Booking booking = bookingRepository.findById(event.getBookingId()).orElseThrow();
 
-        boolean isBooked = bookingRepository.existsByResourceIdAndStatusAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+        boolean isBooked = bookingRepository.existsOverlappingBooking(
                 booking.getResourceId(),
                 Status.ACTIVE,
-                booking.getEndTime(),
-                booking.getStartTime()
+                booking.getStartTime(),
+                booking.getEndTime()
         );
 
         if (isBooked) {
@@ -142,6 +213,79 @@ public class BookingService {
         if (body.startTime().isAfter(body.endTime()) || body.startTime().isEqual(body.endTime())) {
             throw new CannotCreateBookingException("Start time must be before end time");
         }
+    }
+
+    private void assertAvailabilityDatesCorrectness(LocalDateTime from, LocalDateTime to) {
+        if (from.isAfter(to) || from.isEqual(to)) {
+            throw new IllegalArgumentException("From time must be before to time");
+        }
+    }
+
+    private List<AvailabilityPeriodDto> buildAvailabilityPeriods(
+            LocalDateTime from,
+            LocalDateTime to,
+            List<Booking> blockingBookings
+    ) {
+        List<AvailabilityPeriodDto> periods = new ArrayList<>();
+        LocalDateTime cursor = from;
+        LocalDateTime unavailableStart = null;
+        LocalDateTime unavailableEnd = null;
+
+        for (Booking booking : blockingBookings) {
+            LocalDateTime bookingStart = max(booking.getStartTime(), from);
+            LocalDateTime bookingEnd = min(booking.getEndTime(), to);
+
+            if (!bookingStart.isBefore(bookingEnd)) {
+                continue;
+            }
+
+            if (unavailableStart == null) {
+                unavailableStart = bookingStart;
+                unavailableEnd = bookingEnd;
+                continue;
+            }
+
+            if (!bookingStart.isAfter(unavailableEnd)) {
+                unavailableEnd = max(unavailableEnd, bookingEnd);
+                continue;
+            }
+
+            cursor = addAvailabilityBlock(periods, cursor, unavailableStart, unavailableEnd);
+            unavailableStart = bookingStart;
+            unavailableEnd = bookingEnd;
+        }
+
+        if (unavailableStart != null) {
+            cursor = addAvailabilityBlock(periods, cursor, unavailableStart, unavailableEnd);
+        }
+
+        if (cursor.isBefore(to)) {
+            periods.add(new AvailabilityPeriodDto(cursor, to, AvailabilityStatus.AVAILABLE));
+        }
+
+        return periods;
+    }
+
+    private LocalDateTime addAvailabilityBlock(
+            List<AvailabilityPeriodDto> periods,
+            LocalDateTime cursor,
+            LocalDateTime unavailableStart,
+            LocalDateTime unavailableEnd
+    ) {
+        if (cursor.isBefore(unavailableStart)) {
+            periods.add(new AvailabilityPeriodDto(cursor, unavailableStart, AvailabilityStatus.AVAILABLE));
+        }
+
+        periods.add(new AvailabilityPeriodDto(unavailableStart, unavailableEnd, AvailabilityStatus.UNAVAILABLE));
+        return unavailableEnd;
+    }
+
+    private LocalDateTime max(LocalDateTime first, LocalDateTime second) {
+        return first.isAfter(second) ? first : second;
+    }
+
+    private LocalDateTime min(LocalDateTime first, LocalDateTime second) {
+        return first.isBefore(second) ? first : second;
     }
 
     private BookingStatusMessage toStatusMessage(KafkaEvent event) {

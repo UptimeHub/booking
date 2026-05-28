@@ -12,7 +12,19 @@ public class HeaderUtils {
     @Value("${custom-header-names.user.id}")
     private String userIdHeader;
 
+    @Value("${custom-header-names.organization.id}")
+    private String organizationIdHeader;
+
     public UUID extractUserId(HttpServletRequest request) {
-        return UUID.fromString(request.getHeader(userIdHeader));
+        return extractUuidHeader(request, userIdHeader);
+    }
+
+    public UUID extractOrganizationId(HttpServletRequest request) {
+        return extractUuidHeader(request, organizationIdHeader);
+    }
+
+    private UUID extractUuidHeader(HttpServletRequest request, String headerName) {
+        String headerValue = request.getHeader(headerName);
+        return headerValue == null ? null : UUID.fromString(headerValue);
     }
 }
