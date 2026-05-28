@@ -14,7 +14,6 @@ spring:
         spring.json.trusted.packages: uz.uptimehub.booking.kafka.dto
       key-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
       value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
-      transaction-id-prefix: tx_booking_id
     consumer:
       properties:
         spring.json.trusted.packages: "*"
