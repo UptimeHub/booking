@@ -1,0 +1,23 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+      group-id: booking-service-test
+    producer:
+      properties:
+        spring.json.add.type.headers: false
+
+app:
+  kafka:
+    topics:
+      consume:
+        booking-create: booking.booking-create.test
+        booking-confirmed: booking.booking-confirmed.test
+        booking-failed: booking.booking-failed.test
+      produce:
+        booking-create: booking.booking-created.test
+        booking-confirmed: booking.booking-confirmed.test
+        booking-failed: booking.booking-failed.test
