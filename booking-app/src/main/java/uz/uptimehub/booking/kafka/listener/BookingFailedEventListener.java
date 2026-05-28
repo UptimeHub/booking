@@ -21,6 +21,6 @@ public class BookingFailedEventListener implements Listener<BookingFailedEvent> 
     )
     @Override
     public void receiveEvent(BookingFailedEvent event) {
-        // Handle the booking failed event, e.g., log it, notify the user, etc.
+        bookingService.processBookingStatus(event);
     }
 }

@@ -5,11 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import uz.uptimehub.booking.kafka.dto.booking.BookingCreatedEvent;
+import uz.uptimehub.booking.service.BookingService;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class BookingConfirmedEventListener implements Listener<BookingCreatedEvent> {
+
+    private final BookingService bookingService;
 
     @KafkaListener(
             topics = "${app.kafka.topics.consume.booking-confirmed}",
@@ -18,6 +21,6 @@ public class BookingConfirmedEventListener implements Listener<BookingCreatedEve
     )
     @Override
     public void receiveEvent(BookingCreatedEvent event) {
-        // TODO
+        bookingService.processBookingStatus(event);
     }
 }

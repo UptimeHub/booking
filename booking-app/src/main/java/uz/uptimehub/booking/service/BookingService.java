@@ -3,6 +3,7 @@ package uz.uptimehub.booking.service;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,8 @@ import uz.uptimehub.booking.dto.booking.Status;
 import uz.uptimehub.booking.exception.CannotCreateBookingException;
 import uz.uptimehub.booking.jpa.entity.Booking;
 import uz.uptimehub.booking.jpa.repository.BookingRepository;
+import uz.uptimehub.booking.kafka.dto.KafkaEvent;
+import uz.uptimehub.booking.kafka.dto.booking.BookingConfirmedEvent;
 import uz.uptimehub.booking.kafka.dto.booking.BookingCreatedEvent;
 import uz.uptimehub.booking.kafka.dto.booking.BookingFailedEvent;
 import uz.uptimehub.booking.kafka.producer.BookingConfirmedEventProducer;
@@ -19,6 +22,7 @@ import uz.uptimehub.booking.kafka.producer.BookingCreatedEventProducer;
 import uz.uptimehub.booking.kafka.producer.BookingFailedEventProducer;
 import uz.uptimehub.booking.mapper.BookingMapper;
 import uz.uptimehub.booking.utils.HeaderUtils;
+import uz.uptimehub.booking.websocket.dto.BookingStatusMessage;
 import uz.uptimehub.core.exception.EntityNotFoundException;
 import uz.uptimehub.resource.dto.client.ResourceClient;
 import uz.uptimehub.resource.dto.resource.ResourceDto;
@@ -39,6 +43,7 @@ public class BookingService {
     private final BookingCreatedEventProducer bookingCreatedEventProducer;
     private final BookingFailedEventProducer bookingFailedEventProducer;
     private final BookingConfirmedEventProducer bookingConfirmedEventProducer;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional("transactionManager")
     public BookingDto createBooking(BookingCreateRequest body, HttpServletRequest request) {
@@ -91,18 +96,29 @@ public class BookingService {
             );
         } else {
             booking.setStatus(Status.ACTIVE);
-            bookingCreatedEventProducer.send(
-                    new BookingCreatedEvent(
+            bookingConfirmedEventProducer.send(
+                    new BookingConfirmedEvent(
                             UUID.randomUUID(),
                             booking.getId(),
                             booking.getResourceId(),
-                            booking.getUserId()
+                            booking.getUserId(),
+                            LocalDateTime.now()
                     ),
                     null
             );
         }
 
         bookingRepository.save(booking);
+    }
+
+    public void processBookingStatus(KafkaEvent event) {
+        BookingStatusMessage statusMessage = toStatusMessage(event);
+
+        messagingTemplate.convertAndSendToUser(
+                statusMessage.getUserId().toString(),
+                "/queue/booking-status",
+                statusMessage
+        );
     }
 
     @Transactional(transactionManager = "transactionManager")
@@ -125,6 +141,29 @@ public class BookingService {
     private void assertBookingDatesCorrectness(BookingCreateRequest body) {
         if (body.startTime().isAfter(body.endTime()) || body.startTime().isEqual(body.endTime())) {
             throw new CannotCreateBookingException("Start time must be before end time");
+        }
+    }
+
+    private BookingStatusMessage toStatusMessage(KafkaEvent event) {
+        if (event instanceof BookingConfirmedEvent confirmedEvent) {
+            return BookingStatusMessage.builder()
+                    .bookingId(confirmedEvent.getBookingId())
+                    .userId(confirmedEvent.getUserId())
+                    .resourceId(confirmedEvent.getResourceId())
+                    .status("CONFIRMED")
+                    .occurredAt(confirmedEvent.getConfirmedAt())
+                    .build();
+        } else if (event instanceof BookingFailedEvent failedEvent) {
+            return BookingStatusMessage.builder()
+                    .bookingId(failedEvent.getBookingId())
+                    .userId(failedEvent.getUserId())
+                    .resourceId(failedEvent.getResourceId())
+                    .status("FAILED")
+                    .reason(failedEvent.getReason())
+                    .occurredAt(failedEvent.getFailedAt())
+                    .build();
+        } else {
+            throw new RuntimeException("Unsupported event type: " + event.getClass().getName());
         }
     }
 }

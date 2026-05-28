@@ -11,6 +11,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class BookingStatusMessage {
+    private UUID userId;
     private UUID bookingId;
     private UUID resourceId;
     private String status;
