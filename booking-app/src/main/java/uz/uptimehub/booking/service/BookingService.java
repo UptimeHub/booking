@@ -1,10 +1,12 @@
 package uz.uptimehub.booking.service;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -82,7 +84,8 @@ public class BookingService {
 
     public Page<BookingDto> getMyBookings(Status status, UUID resourceId, LocalDateTime from, LocalDateTime to, Pageable pageable, HttpServletRequest request) {
         UUID userId = headerUtils.extractUserId(request);
-        return bookingRepository.findMyBookings(userId, status, resourceId, from, to, pageable)
+        Specification<Booking> specification = myBookingsSpecification(userId, status, resourceId, from, to);
+        return bookingRepository.findAll(specification, pageable)
                 .map(bookingMapper::toDto);
     }
 
@@ -190,6 +193,34 @@ public class BookingService {
                 "/queue/booking-status",
                 statusMessage
         );
+    }
+
+    private Specification<Booking> myBookingsSpecification(
+            UUID userId,
+            Status status,
+            UUID resourceId,
+            LocalDateTime from,
+            LocalDateTime to
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(criteriaBuilder.equal(root.get("userId"), userId));
+
+            if (status != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), status));
+            }
+            if (resourceId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("resourceId"), resourceId));
+            }
+            if (from != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("startTime"), from));
+            }
+            if (to != null) {
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("endTime"), to));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
+        };
     }
 
     @Transactional(transactionManager = "transactionManager")
