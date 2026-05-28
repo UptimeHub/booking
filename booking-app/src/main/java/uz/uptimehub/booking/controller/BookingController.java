@@ -45,7 +45,7 @@ public class BookingController {
         return bookingService.getBooking(bookingId, request);
     }
 
-    @GetMapping("/resource/{resourceId}/availability")
+    @GetMapping("/resource/availability/{resourceId}")
     public AvailabilityResponse getAvailability(
             @PathVariable UUID resourceId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
