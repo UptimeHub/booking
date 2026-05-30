@@ -1,0 +1,34 @@
+name: Booking CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "booking-app/**"
+      - "booking-api/**"
+      - "pom.xml"
+      - "Dockerfile"
+      - ".github/workflows/booking-ci.yml"
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "booking-app/**"
+      - "booking-api/**"
+      - "pom.xml"
+      - "Dockerfile"
+      - ".github/workflows/booking-ci.yml"
+
+jobs:
+  booking-app:
+    uses: UptimeHub/infra/.github/workflows/java-service-ci.yml@main
+    with:
+      java-version: '25'
+      working-directory: '.'
+      image-name: 'booking'
+      dockerfile: './Dockerfile'
+      docker-context: '.'
+      publish-image: ${{ github.event_name == 'push' }}
