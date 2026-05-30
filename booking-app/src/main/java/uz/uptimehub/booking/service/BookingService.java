@@ -17,7 +17,6 @@ import uz.uptimehub.booking.dto.availability.AvailabilityStatus;
 import uz.uptimehub.booking.dto.booking.BookingCreateRequest;
 import uz.uptimehub.booking.dto.booking.BookingDto;
 import uz.uptimehub.booking.dto.booking.Status;
-import uz.uptimehub.booking.exception.CannotCreateBookingException;
 import uz.uptimehub.booking.jpa.entity.Booking;
 import uz.uptimehub.booking.jpa.repository.BookingRepository;
 import uz.uptimehub.booking.kafka.dto.KafkaEvent;
@@ -30,6 +29,7 @@ import uz.uptimehub.booking.kafka.producer.BookingFailedEventProducer;
 import uz.uptimehub.booking.mapper.BookingMapper;
 import uz.uptimehub.booking.utils.HeaderUtils;
 import uz.uptimehub.booking.websocket.dto.BookingStatusMessage;
+import uz.uptimehub.core.exception.BadRequestException;
 import uz.uptimehub.core.exception.EntityNotFoundException;
 import uz.uptimehub.resource.dto.client.ResourceClient;
 import uz.uptimehub.resource.dto.resource.ResourceDto;
@@ -236,13 +236,13 @@ public class BookingService {
         }
 
         if (resource.getStatus() != ResourceStatus.PUBLISHED) {
-            throw new CannotCreateBookingException("Cannot create booking for resource that is not active");
+            throw new BadRequestException("Cannot create booking for resource that is not active");
         }
     }
 
     private void assertBookingDatesCorrectness(BookingCreateRequest body) {
         if (body.startTime().isAfter(body.endTime()) || body.startTime().isEqual(body.endTime())) {
-            throw new CannotCreateBookingException("Start time must be before end time");
+            throw new BadRequestException("Start time must be before end time");
         }
     }
 
