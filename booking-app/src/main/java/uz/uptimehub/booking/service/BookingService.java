@@ -138,7 +138,7 @@ public class BookingService {
         if (booking.getStatus() == Status.CANCELLED
                 || booking.getStatus() == Status.EXPIRED
                 || booking.getStatus() == Status.FAILED) {
-            throw new IllegalStateException("Booking cannot be cancelled");
+            throw new BadRequestException("Booking cannot be cancelled");
         }
 
         booking.setStatus(Status.CANCELLED);
@@ -248,7 +248,7 @@ public class BookingService {
 
     private void assertAvailabilityDatesCorrectness(LocalDateTime from, LocalDateTime to) {
         if (from.isAfter(to) || from.isEqual(to)) {
-            throw new IllegalArgumentException("From time must be before to time");
+            throw new BadRequestException("From time must be before to time");
         }
     }
 
