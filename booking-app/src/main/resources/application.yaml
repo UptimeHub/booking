@@ -50,7 +50,7 @@ app:
         transaction-id-prefix: tx_booking_confirmed
     topics:
       consume:
-        booking-create: ${KAFKA_TOPIC_BOOKING_CREATE:booking.booking-create}
+        booking-create: ${KAFKA_TOPIC_BOOKING_CREATED:booking.booking-created}}
         booking-failed: ${KAFKA_TOPIC_BOOKING_FAILED:booking.booking-failed}
         booking-confirmed: ${KAFKA_TOPIC_BOOKING_CONFIRMED:booking.booking-confirmed}
 

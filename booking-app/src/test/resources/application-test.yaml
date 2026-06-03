@@ -14,7 +14,7 @@ app:
   kafka:
     topics:
       consume:
-        booking-create: booking.booking-create.test
+        booking-create: booking.booking-created.test
         booking-confirmed: booking.booking-confirmed.test
         booking-failed: booking.booking-failed.test
       produce:
