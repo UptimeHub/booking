@@ -29,6 +29,7 @@ permissions:
 jobs:
   booking-app:
     uses: UptimeHub/infra/.github/workflows/java-service-ci.yml@main
+    secrets: inherit
     with:
       java-version: '25'
       working-directory: '.'
@@ -36,3 +37,13 @@ jobs:
       dockerfile: './Dockerfile'
       docker-context: '.'
       publish-image: ${{ github.event_name == 'push' }}
+      deploy: ${{ github.event_name == 'push' }}
+      deploy-container-name: 'booking'
+      deploy-image-name: 'ghcr.io/uptimehub/booking'
+      deploy-run-options: >-
+        --restart unless-stopped
+        --network infra_booking-network
+        -p 8083:8083
+        --env-file /opt/uptimehub/env/booking.env
+      deploy-healthcheck-url: http://localhost:8083/actuator/health
+      deploy-healthcheck-timeout-seconds: 90

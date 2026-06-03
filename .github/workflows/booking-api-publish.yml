@@ -18,6 +18,7 @@ jobs:
     publish-booking-api:
         name: Publish Booking API
         uses: UptimeHub/infra/.github/workflows/maven-package-publish.yml@main
+        secrets: inherit
         with:
             java-version: '25'
             working-directory: 'booking-api'
