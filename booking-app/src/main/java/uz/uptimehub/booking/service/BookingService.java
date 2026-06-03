@@ -148,6 +148,16 @@ public class BookingService {
     public void processBookingEvent(BookingCreatedEvent event) {
         Booking booking = bookingRepository.findById(event.getBookingId()).orElseThrow();
 
+        if (booking.getStatus() != Status.PENDING) {
+            log.info(
+                    "Skipping BookingCreatedEvent {} for booking {} because current status is {}",
+                    event.getEventId(),
+                    booking.getId(),
+                    booking.getStatus()
+            );
+            return;
+        }
+
         boolean isBooked = bookingRepository.existsOverlappingBooking(
                 booking.getResourceId(),
                 Status.ACTIVE,

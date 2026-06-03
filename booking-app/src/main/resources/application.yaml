@@ -19,6 +19,7 @@ spring:
         spring.json.trusted.packages: "*"
         spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
       group-id: booking
+      auto-offset-reset: earliest
       isolation-level: read_committed
       value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       key-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
@@ -41,6 +42,8 @@ springdoc:
 app:
   kafka:
     concurrency: 1
+    consumer-groups:
+      booking-created: ${KAFKA_GROUP_BOOKING_CREATED:booking-booking-created-replay}
     producers:
       booking-create:
         transaction-id-prefix: tx_booking_create
@@ -50,7 +53,7 @@ app:
         transaction-id-prefix: tx_booking_confirmed
     topics:
       consume:
-        booking-create: ${KAFKA_TOPIC_BOOKING_CREATED:booking.booking-created}}
+        booking-create: ${KAFKA_TOPIC_BOOKING_CREATED:booking.booking-created}
         booking-failed: ${KAFKA_TOPIC_BOOKING_FAILED:booking.booking-failed}
         booking-confirmed: ${KAFKA_TOPIC_BOOKING_CONFIRMED:booking.booking-confirmed}
 

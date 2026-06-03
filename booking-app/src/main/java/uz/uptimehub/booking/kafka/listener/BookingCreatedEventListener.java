@@ -17,7 +17,7 @@ public class BookingCreatedEventListener implements Listener<BookingCreatedEvent
     @KafkaListener(
             topics = "${app.kafka.topics.consume.booking-create}",
             concurrency = "${app.kafka.concurrency}",
-            groupId = "booking-booking-created"
+            groupId = "${app.kafka.consumer-groups.booking-created}"
     )
     @Override
     public void receiveEvent(BookingCreatedEvent event) {
