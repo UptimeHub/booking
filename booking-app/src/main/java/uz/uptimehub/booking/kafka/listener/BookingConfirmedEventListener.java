@@ -21,6 +21,7 @@ public class BookingConfirmedEventListener implements Listener<BookingConfirmedE
     )
     @Override
     public void receiveEvent(BookingConfirmedEvent event) {
+        log.info("Received BookingConfirmedEvent: {}", event);
         bookingService.processBookingStatus(event);
     }
 }

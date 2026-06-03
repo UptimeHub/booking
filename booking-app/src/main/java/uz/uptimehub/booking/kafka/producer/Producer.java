@@ -16,7 +16,7 @@ public class Producer<T extends KafkaEvent> {
     private String topic;
 
     public void send(T event, Runnable successHandler) {
-        log.trace("Start sending event {} to {}", event, topic);
+        log.info("Start sending event {} to {}", event, topic);
 
         kafkaTemplate.executeInTransaction(kafkaOperations -> {
             CompletableFuture<SendResult<String, T>> result = kafkaOperations.send(topic, event);
