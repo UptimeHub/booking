@@ -56,11 +56,13 @@ app:
         booking-create: ${KAFKA_TOPIC_BOOKING_CREATED:booking.booking-created}
         booking-failed: ${KAFKA_TOPIC_BOOKING_FAILED:booking.booking-failed}
         booking-confirmed: ${KAFKA_TOPIC_BOOKING_CONFIRMED:booking.booking-confirmed}
+        resource-index: ${KAFKA_TOPIC_RESOURCE_INDEX:resource.resource-index}
 
       produce:
         booking-create: ${KAFKA_TOPIC_BOOKING_CREATED:booking.booking-created}
         booking-failed: ${KAFKA_TOPIC_BOOKING_FAILED:booking.booking-failed}
         booking-confirmed: ${KAFKA_TOPIC_BOOKING_CONFIRMED:booking.booking-confirmed}
+        resource-index: ${KAFKA_TOPIC_RESOURCE_INDEX:resource.resource-index}
 
 management:
   endpoints:

@@ -41,6 +41,11 @@ public class KafkaConfig {
         return TopicBuilder.name(topic).partitions(4).build();
     }
 
+    @Bean
+    public NewTopic resourceIndexTopic(@Value("${app.kafka.topics.consume.resource-index}") String topic) {
+        return TopicBuilder.name(topic).partitions(4).build();
+    }
+
     @Bean("bookingCreatedEventProducerFactory")
     public ProducerFactory<String, BookingCreatedEvent> bookingCreatedEventProducerFactory(
             Map<String, Object> commonProducerProperties,
