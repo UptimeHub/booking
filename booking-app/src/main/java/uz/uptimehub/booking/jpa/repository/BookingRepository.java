@@ -98,8 +98,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
                 and (:userId is null or b.userId = :userId)
                 and (:resourceId is null or b.resourceId = :resourceId)
                 and (:status is null or b.status = :status)
-                and (:from is null or b.startTime >= :from)
-                and (:to is null or b.endTime <= :to)
+                and (cast(:from as timestamp) is null or b.startTime >= :from)
+                and (cast(:to as timestamp) is null or b.endTime <= :to)
             """)
     Page<Booking> searchBookings(
             @Param("organizationId") UUID organizationId,
